@@ -3,47 +3,192 @@ import ReactionError from "@reactioncommerce/reaction-error";
 import CurrencyDefinitions from "@reactioncommerce/api-utils/CurrencyDefinitions.js";
 import { Account } from "../simpleSchemas.js";
 
+const Socials = new SimpleSchema({
+  instagram: {
+    type: String,
+    optional: true,
+  },
+  facebook: {
+    type: String,
+    optional: true,
+  },
+  twitter: {
+    type: String,
+    optional: true,
+  },
+  youtube: {
+    type: String,
+    optional: true,
+  },
+  pinterest: {
+    type: String,
+    optional: true,
+  },
+  snapchat: {
+    type: String,
+    optional: true,
+  },
+  tiktok: {
+    type: String,
+    optional: true,
+  },
+});
+
+const ArtistRates = new SimpleSchema({
+  hourly: {
+    type: Number,
+    optional: true,
+  },
+  totalAmount: {
+    type: Number,
+    optional: true,
+  },
+  depositAmount: {
+    type: Number,
+    optional: true,
+  },
+});
+
+const BusinessInfo = new SimpleSchema({
+  studioName: {
+    type: String,
+    optional: true,
+  },
+  isPrivate: {
+    type: Boolean,
+    optional: true,
+  },
+  isMobile: {
+    type: Boolean,
+    optional: true,
+  },
+  address: {
+    type: String,
+    optional: true,
+  },
+  city: {
+    type: String,
+    optional: true,
+  },
+  state: {
+    type: String,
+    optional: true,
+  },
+  depositPolicy: {
+    type: String,
+    optional: true,
+  },
+  cancellationPolicy: {
+    type: String,
+    optional: true,
+  },
+});
+
+const BookingAvailabilityTime = new SimpleSchema({
+  starTime: {
+    type: String,
+    optional: true,
+  },
+  endTime: {
+    type: String,
+    optional: true,
+  },
+});
+
+const BookingAvailability = new SimpleSchema({
+  day: {
+    type: String,
+    optional: true,
+  },
+  times: {
+    type: Array,
+    optional: true,
+  },
+  "times.$": {
+    type: BookingAvailabilityTime,
+  },
+});
+
 const inputSchema = new SimpleSchema({
   accountId: {
     type: String,
-    optional: true
+    optional: true,
   },
   bio: {
     type: String,
-    optional: true
+    optional: true,
   },
   currencyCode: {
     type: String,
-    optional: true
+    optional: true,
   },
   firstName: {
     type: String,
-    optional: true
+    optional: true,
   },
   language: {
     type: String,
-    optional: true
+    optional: true,
   },
   lastName: {
     type: String,
-    optional: true
+    optional: true,
   },
   name: {
     type: String,
-    optional: true
+    optional: true,
   },
   note: {
     type: String,
-    optional: true
+    optional: true,
   },
   picture: {
     type: String,
-    optional: true
+    optional: true,
   },
   username: {
     type: String,
-    optional: true
-  }
+    optional: true,
+  },
+  //additional fields
+  workStyle: {
+    type: String,
+    optional: true,
+  },
+  yearsOfExperience: {
+    type: String,
+    optional: true,
+  },
+  socials: {
+    type: Socials,
+    optional: true,
+  },
+  servicesOffered: {
+    type: Array,
+    optional: true,
+  },
+  "servicesOffered.$": {
+    type: String,
+  },
+  duration: {
+    type: String,
+    optional: true,
+  },
+  artistRates: {
+    type: ArtistRates,
+    optional: true,
+  },
+  bookingAvailability: {
+    type: Array,
+    optional: true,
+  },
+  "bookingAvailability.$": {
+    type: BookingAvailability,
+  },
+  businessInfo: {
+    type: BusinessInfo,
+    optional: true,
+  },
 });
 
 /**
@@ -62,7 +207,12 @@ const inputSchema = new SimpleSchema({
  */
 export default async function updateAccount(context, input) {
   inputSchema.validate(input);
-  const { appEvents, collections, accountId: accountIdFromContext, userId } = context;
+  const {
+    appEvents,
+    collections,
+    accountId: accountIdFromContext,
+    userId,
+  } = context;
   const { Accounts } = collections;
   const {
     accountId: providedAccountId,
@@ -74,25 +224,45 @@ export default async function updateAccount(context, input) {
     name,
     note,
     picture,
-    username
+    username,
+
+    //additional Fields
+    workStyle,
+    yearsOfExperience,
+    socials,
+    servicesOffered,
+    duration,
+    artistRates,
+    bookingAvailability,
+    businessInfo,
   } = input;
 
   const accountId = providedAccountId || accountIdFromContext;
   if (!accountId) throw new ReactionError("access-denied", "Access Denied");
 
-  const account = await Accounts.findOne({ _id: accountId }, { projection: { userId: 1 } });
+  const account = await Accounts.findOne(
+    { _id: accountId },
+    { projection: { userId: 1 } }
+  );
   if (!account) throw new ReactionError("not-found", "No account found");
 
-  await context.validatePermissions(`reaction:legacy:accounts:${accountId}`, "update", {
-    owner: account.userId
-  });
+  await context.validatePermissions(
+    `reaction:legacy:accounts:${accountId}`,
+    "update",
+    {
+      owner: account.userId,
+    }
+  );
 
   const updates = {};
   const updatedFields = [];
 
   if (typeof currencyCode === "string" || currencyCode === null) {
     if (currencyCode !== null && !CurrencyDefinitions[currencyCode]) {
-      throw new ReactionError("invalid-argument", `No currency has code "${currencyCode}"`);
+      throw new ReactionError(
+        "invalid-argument",
+        `No currency has code "${currencyCode}"`
+      );
     }
 
     updates["profile.currency"] = currencyCode;
@@ -143,29 +313,76 @@ export default async function updateAccount(context, input) {
     updatedFields.push("username");
   }
 
+  if (typeof workStyle === "string" || workStyle === null) {
+    updates["workStyle"] = workStyle;
+    updatedFields.push("workStyle");
+  }
+
+  if (typeof yearsOfExperience === "string" || yearsOfExperience === null) {
+    updates["yearsOfExperience"] = yearsOfExperience;
+    updatedFields.push("yearsOfExperience");
+  }
+
+  if (typeof socials === "object" || socials === null) {
+    updates["socials"] = socials;
+    updatedFields.push("socials");
+  }
+
+  if (typeof servicesOffered === "object" || servicesOffered === null) {
+    updates["servicesOffered"] = servicesOffered;
+    updatedFields.push("servicesOffered");
+  }
+
+  if (typeof duration === "string" || duration === null) {
+    updates["duration"] = duration;
+    updatedFields.push("duration");
+  }
+
+  if (typeof artistRates === "object" || artistRates === null) {
+    updates["artistRates"] = artistRates;
+    updatedFields.push("artistRates");
+  }
+
+  if (typeof bookingAvailability === "object" || bookingAvailability === null) {
+    updates["bookingAvailability"] = bookingAvailability;
+    updatedFields.push("bookingAvailability");
+  }
+
+  if (typeof businessInfo === "object" || businessInfo === null) {
+    updates["businessInfo"] = businessInfo;
+    updatedFields.push("businessInfo");
+  }
+
   if (updatedFields.length === 0) {
-    throw new ReactionError("invalid-argument", "At least one field to update is required");
+    throw new ReactionError(
+      "invalid-argument",
+      "At least one field to update is required"
+    );
   }
 
   const modifier = {
     $set: {
       ...updates,
-      updatedAt: new Date()
-    }
+      updatedAt: new Date(),
+    },
   };
 
   Account.validate(modifier, { modifier: true });
 
-  const { value: updatedAccount } = await Accounts.findOneAndUpdate({
-    _id: accountId
-  }, modifier, {
-    returnOriginal: false
-  });
+  const { value: updatedAccount } = await Accounts.findOneAndUpdate(
+    {
+      _id: accountId,
+    },
+    modifier,
+    {
+      returnOriginal: false,
+    }
+  );
 
   await appEvents.emit("afterAccountUpdate", {
     account: updatedAccount,
     updatedBy: userId,
-    updatedFields
+    updatedFields,
   });
 
   return updatedAccount;
